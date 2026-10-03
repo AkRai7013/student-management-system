@@ -1,16 +1,15 @@
-package com.example.ajay.entity;
+package com.example.ajay.DTO;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-@Entity
 @Data
-public class StudentEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class StudentDTO {
 
     @NotBlank(message = "Name is required")
     @Size(min = 2, max = 50, message = "Name must be between 2 and 50 characters")
@@ -27,13 +26,12 @@ public class StudentEntity {
     @Email(message = "Please enter a valid email")
     private String email;
 
-    private boolean status;
+    @Size(min = 2, max = 10, message = "City must be between 2 and 10 characters")
+    private String city;
 
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "address_id")
-    private Address address;
+    private String state;
 
-    // Default constructor - required by JPA
-    public StudentEntity() {
-    }
+    private int pincode;
+
+    private String password;
 }

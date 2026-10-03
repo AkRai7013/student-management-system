@@ -1,13 +1,12 @@
 package com.example.ajay.controller;
 
-
+import com.example.ajay.DTO.StudentDTO;
 import com.example.ajay.entity.StudentEntity;
+import com.example.ajay.response.ResponseGlobal;
 import com.example.ajay.service.StudentService;
-import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/students")
@@ -19,53 +18,66 @@ public class StudentController {
         this.service = service;
     }
 
-    // CREATE
+
+    // CREATE STUDENT
     @PostMapping("/create")
-    public StudentEntity createStudent(@RequestBody StudentEntity student) {
-        return service.saveStudent(student);
+    public ResponseGlobal<StudentDTO> createStudent(
+            @RequestBody StudentDTO student) {
+
+        return service.createStudent(student);
     }
 
-    // READ ALL
+
+    // GET ALL STUDENTS
     @GetMapping("/all")
-    public List<StudentEntity> getAllStudents() {
-        return service.getAllStudents();
+    public ResponseGlobal<List<StudentEntity>> getAllStudents() {
+
+        List<StudentEntity> students =
+                service.getAllStudents();
+
+        return ResponseGlobal.onSuccess(
+                "Students fetched successfully",
+                students
+        );
     }
 
-    // READ BY ID
+
+    // GET STUDENT BY ID
     @GetMapping("/{id}")
-    public Optional<StudentEntity> getStudentById(@PathVariable int id) {
-        return service.getStudentById(id);
+    public ResponseGlobal<StudentEntity> getStudentById(
+            @PathVariable Long id) {
+
+        StudentEntity student =
+                service.getStudentById(id);
+
+        return ResponseGlobal.onSuccess(
+                "Student fetched successfully",
+                student
+        );
     }
 
-    // UPDATE
+
+    // UPDATE STUDENT
     @PutMapping("/{id}")
-    public StudentEntity updateStudent(
-            @PathVariable int id,
+    public ResponseGlobal<StudentEntity> updateStudent(
+            @PathVariable Long id,
             @RequestBody StudentEntity student) {
 
         return service.updateStudent(id, student);
     }
 
-    // DELETE
+
+    // DELETE STUDENT
     @DeleteMapping("/{id}")
-    public String deleteStudent(@PathVariable int id) {
-        service.deleteStudent(id);
-        return "Student deleted successfully";
-    }
+    public ResponseGlobal<String> deleteStudent(
+            @PathVariable Long id) {
 
-    // PAGINATION + SORTING
-    @GetMapping("/pages")
-    public Page<StudentEntity> pageAllStudents(
-            @RequestParam int page,
-            @RequestParam int size,
-            @RequestParam String sortBy,
-            @RequestParam String direction) {
+        String message =
+                service.deleteStudent(id);
 
-        return service.pageAllStudents(
-                page,
-                size,
-                sortBy,
-                direction
+        return ResponseGlobal.onSuccess(
+                message,
+                null
         );
     }
 }
