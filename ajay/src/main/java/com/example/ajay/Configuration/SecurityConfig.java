@@ -28,28 +28,31 @@ public class SecurityConfig {
 
         http
                 .csrf(csrf -> csrf.disable())
-
                 .authorizeHttpRequests(auth -> auth
 
-                        // Login API does not need JWT
-                        .requestMatchers("/login/StudentLogin")
-                        .permitAll()
+                        // Public endpoints for local testing
+                        .requestMatchers(
+                                "/login/StudentLogin",
+                                "/admin/create",
+                                "/admin/login"
+                        ).permitAll()
 
-                        // These APIs need JWT
-                        .requestMatchers("/login/name")
-                        .authenticated()
+                        // Only ADMIN can access future admin-management endpoints
+                        .requestMatchers("/admin/**")
+                        .hasRole("ADMIN")
 
-                        .requestMatchers("/login/email")
-                        .authenticated()
-
-                        // Student APIs need JWT
+                        // ADMIN and STAFF can access Student APIs
                         .requestMatchers("/students/**")
-                        .authenticated()
+                        .hasAnyRole("ADMIN", "STAFF")
 
-                        .anyRequest()
-                        .authenticated()
+                        // Existing token-claim endpoints
+                        .requestMatchers(
+                                "/login/name",
+                                "/login/email"
+                        ).authenticated()
+
+                        .anyRequest().authenticated()
                 )
-
                 .addFilterBefore(
                         jwtFilter,
                         UsernamePasswordAuthenticationFilter.class

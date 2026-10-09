@@ -13,15 +13,16 @@ import java.util.Date;
 public class JWTService {
 
     private final String secretKey =
-            "infiuwefubufq9ubf9h340f3ifnionf2i3fi";
+            System.getenv("JWT_SECRET");
 
-    private final SecretKey key =
-            Keys.hmacShaKeyFor(
-                    secretKey.getBytes(StandardCharsets.UTF_8)
-            );
+    private final SecretKey key = Keys.hmacShaKeyFor(
+            secretKey != null
+                    ? secretKey.getBytes(StandardCharsets.UTF_8)
+                    : "replace-this-with-a-long-random-secret-key-123456"
+                    .getBytes(StandardCharsets.UTF_8)
+    );
 
-
-    // Generate JWT token
+    // Existing method for Student login
     public String generateToken(String email, String name) {
 
         return Jwts.builder()
@@ -29,18 +30,32 @@ public class JWTService {
                 .claim("name", name)
                 .claim("email", email)
                 .issuedAt(new Date())
-                .expiration(
-                        new Date(
-                                System.currentTimeMillis()
-                                        + 1000L * 60 * 60 * 10
-                        )
-                )
+                .expiration(new Date(
+                        System.currentTimeMillis() + 1000L * 60 * 60 * 10
+                ))
                 .signWith(key)
                 .compact();
     }
 
+    // New method for Admin/Staff login
+    public String generateToken(
+            String email,
+            String name,
+            String role) {
 
-    // Get all claims from token
+        return Jwts.builder()
+                .subject(email)
+                .claim("name", name)
+                .claim("email", email)
+                .claim("role", role)
+                .issuedAt(new Date())
+                .expiration(new Date(
+                        System.currentTimeMillis() + 1000L * 60 * 60 * 10
+                ))
+                .signWith(key)
+                .compact();
+    }
+
     public Claims getClaims(String token) {
 
         return Jwts.parser()
@@ -50,18 +65,15 @@ public class JWTService {
                 .getPayload();
     }
 
-
-    // Get email from token
     public String getEmailByToken(String token) {
-
         return getClaims(token).getSubject();
     }
 
-
-    // Get name from token
     public String getNameByToken(String token) {
+        return getClaims(token).get("name", String.class);
+    }
 
-        return getClaims(token)
-                .get("name", String.class);
+    public String getRoleByToken(String token) {
+        return getClaims(token).get("role", String.class);
     }
 }
