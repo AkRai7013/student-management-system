@@ -3,6 +3,7 @@ package com.example.ajay.controller;
 import com.example.ajay.Configuration.JWTService;
 import com.example.ajay.response.ResponseGlobal;
 import com.example.ajay.service.LoginService;
+
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -20,6 +21,7 @@ public class AuthController {
         this.jwtService = jwtService;
     }
 
+    // Student Login
     @PostMapping("/StudentLogin")
     public ResponseGlobal<?> login(
             @RequestParam String email,
@@ -28,12 +30,12 @@ public class AuthController {
         return loginService.login(email, password);
     }
 
+    // Get name from JWT token
     @GetMapping("/name")
     public ResponseGlobal<String> getNameByToken(
             @RequestHeader("Authorization") String authorization
     ) {
-
-        String token = authorization.replace("Bearer ", "");
+        String token = extractToken(authorization);
 
         String name = jwtService.getNameByToken(token);
 
@@ -43,12 +45,12 @@ public class AuthController {
         );
     }
 
+    // Get email from JWT token
     @GetMapping("/email")
     public ResponseGlobal<String> getEmailByToken(
             @RequestHeader("Authorization") String authorization
     ) {
-
-        String token = authorization.replace("Bearer ", "");
+        String token = extractToken(authorization);
 
         String email = jwtService.getEmailByToken(token);
 
@@ -56,5 +58,18 @@ public class AuthController {
                 "Email fetched from token",
                 email
         );
+    }
+
+    // Extract token from Authorization header
+    private String extractToken(String authorization) {
+
+        if (authorization == null
+                || !authorization.startsWith("Bearer ")) {
+            throw new IllegalArgumentException(
+                    "Authorization header must contain a Bearer token"
+            );
+        }
+
+        return authorization.substring(7);
     }
 }

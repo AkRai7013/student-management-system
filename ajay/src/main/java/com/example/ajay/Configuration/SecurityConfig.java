@@ -2,8 +2,10 @@ package com.example.ajay.Configuration;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -21,31 +23,38 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(
-            HttpSecurity http
-    ) throws Exception {
+            HttpSecurity http) throws Exception {
 
         JWTFilter jwtFilter = new JWTFilter(jwtService);
 
         http
                 .csrf(csrf -> csrf.disable())
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable())
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
 
-                        // Public endpoints for local testing
                         .requestMatchers(
+                                HttpMethod.POST,
                                 "/login/StudentLogin",
-                                "/admin/create",
                                 "/admin/login"
                         ).permitAll()
 
-                        // Only ADMIN can access future admin-management endpoints
+                        // Temporary public account creation for setup.
+                        // Secure this endpoint after initial setup.
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/admin/create"
+                        ).hasRole("ADMIN")
+
                         .requestMatchers("/admin/**")
                         .hasRole("ADMIN")
 
-                        // ADMIN and STAFF can access Student APIs
                         .requestMatchers("/students/**")
                         .hasAnyRole("ADMIN", "STAFF")
 
-                        // Existing token-claim endpoints
                         .requestMatchers(
                                 "/login/name",
                                 "/login/email"

@@ -1,6 +1,7 @@
 package com.example.ajay.Configuration;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,7 +13,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 
 public class JWTFilter extends OncePerRequestFilter {
@@ -27,9 +27,10 @@ public class JWTFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
 
-        return path.equals("/admin/create")
-                || path.equals("/admin/login")
-                || path.equals("/login/StudentLogin");
+        return ("POST".equalsIgnoreCase(request.getMethod())
+                && ("/admin/login".equals(path)
+                || "/admin/create".equals(path)
+                || "/login/StudentLogin".equals(path)));
     }
 
     @Override
@@ -39,16 +40,15 @@ public class JWTFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String authorizationHeader =
-                request.getHeader("Authorization");
+        String header = request.getHeader("Authorization");
 
-        if (authorizationHeader == null
-                || !authorizationHeader.startsWith("Bearer ")) {
+        // Continue when no Bearer token is provided.
+        if (header == null || !header.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = authorizationHeader.substring(7);
+        String token = header.substring(7).trim();
 
         try {
             Claims claims = jwtService.getClaims(token);
@@ -56,44 +56,35 @@ public class JWTFilter extends OncePerRequestFilter {
             String email = claims.getSubject();
             String role = claims.get("role", String.class);
 
-            if (email == null || email.isBlank()) {
-                throw new IllegalArgumentException(
-                        "Token subject is missing"
-                );
-            }
+            if (email == null || email.isBlank()
+                    || role == null
+                    || !(role.equals("ADMIN") || role.equals("STAFF"))) {
 
-            List<SimpleGrantedAuthority> authorities;
-
-            if (role != null && !role.isBlank()) {
-                authorities = Collections.singletonList(
-                        new SimpleGrantedAuthority("ROLE_" + role)
+                SecurityContextHolder.clearContext();
+                response.sendError(
+                        HttpServletResponse.SC_UNAUTHORIZED,
+                        "Invalid JWT claims"
                 );
-            } else {
-                // Existing Student tokens may not contain a role.
-                authorities = Collections.emptyList();
+                return;
             }
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
                             email,
                             null,
-                            authorities
+                            List.of(
+                                    new SimpleGrantedAuthority("ROLE_" + role)
+                            )
                     );
 
             SecurityContextHolder.getContext()
                     .setAuthentication(authentication);
 
-        } catch (Exception e) {
+        } catch (JwtException | IllegalArgumentException ex) {
             SecurityContextHolder.clearContext();
-
-            response.setStatus(
-                    HttpServletResponse.SC_UNAUTHORIZED
-            );
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
-
-            response.getWriter().write(
-                    "{\"success\":false,\"message\":\"Invalid or expired JWT token\",\"data\":null}"
+            response.sendError(
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "Invalid or expired JWT token"
             );
             return;
         }

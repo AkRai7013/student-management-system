@@ -20,23 +20,23 @@ public class AdminController {
         this.adminService = adminService;
     }
 
-    // Create Admin/Staff account
+    // Create STAFF account
     @PostMapping("/create")
     public ResponseEntity<String> createAdmin(
             @RequestBody AdminDTO adminDTO) {
 
-        String response = adminService.createAdmin(adminDTO);
+        String result = adminService.createAdmin(adminDTO);
 
-        if ("Admin account created successfully".equals(response)) {
-            return ResponseEntity.ok(response);
+        if ("Staff account created successfully".equals(result)) {
+            return ResponseEntity.ok(result);
         }
 
-        if ("Admin email already exists".equals(response)) {
+        if ("Admin email already exists".equals(result)) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(response);
+                    .body(result);
         }
 
-        return ResponseEntity.badRequest().body(response);
+        return ResponseEntity.badRequest().body(result);
     }
 
     // Admin/Staff login
@@ -45,10 +45,10 @@ public class AdminController {
             @RequestBody AdminLoginDTO loginDTO) {
 
         try {
-            Map<String, Object> response =
+            Map<String, Object> result =
                     adminService.adminLogin(loginDTO);
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(result);
 
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

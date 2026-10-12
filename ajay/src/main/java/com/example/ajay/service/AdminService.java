@@ -30,11 +30,16 @@ public class AdminService {
         this.jwtService = jwtService;
     }
 
-    // Create Admin/Staff account
+    // Create STAFF account
     public String createAdmin(AdminDTO adminDTO) {
 
         if (adminDTO == null) {
-            return "Admin details are required";
+            return "Account details are required";
+        }
+
+        if (adminDTO.getName() == null
+                || adminDTO.getName().isBlank()) {
+            return "Name is required";
         }
 
         if (adminDTO.getEmail() == null
@@ -47,11 +52,6 @@ public class AdminService {
             return "Password is required";
         }
 
-        if (adminDTO.getName() == null
-                || adminDTO.getName().isBlank()) {
-            return "Name is required";
-        }
-
         String email = adminDTO.getEmail().trim();
 
         if (adminRepo.existsByEmail(email)) {
@@ -59,23 +59,25 @@ public class AdminService {
         }
 
         Admin admin = new Admin();
-
         admin.setName(adminDTO.getName().trim());
         admin.setEmail(email);
+
+        // Store the password securely using BCrypt
         admin.setPassword(
                 passwordEncoder.encode(adminDTO.getPassword())
         );
 
-        // Public account creation must not grant ADMIN privileges.
+        // Public account creation can only create STAFF
         admin.setRole(RoleEnum.STAFF);
 
         adminRepo.save(admin);
 
-        return "Admin account created successfully";
+        return "Staff account created successfully";
     }
 
     // Admin/Staff login
-    public Map<String, Object> adminLogin(AdminLoginDTO loginDTO) {
+    public Map<String, Object> adminLogin(
+            AdminLoginDTO loginDTO) {
 
         if (loginDTO == null
                 || loginDTO.getEmail() == null
@@ -102,7 +104,7 @@ public class AdminService {
             );
         }
 
-        // Generate JWT containing email, name, and role.
+        // Generate token using the role stored in the database
         String token = jwtService.generateToken(
                 admin.getEmail(),
                 admin.getName(),

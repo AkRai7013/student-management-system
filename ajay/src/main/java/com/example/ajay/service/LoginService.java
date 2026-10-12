@@ -4,6 +4,7 @@ import com.example.ajay.Configuration.JWTService;
 import com.example.ajay.entity.Login;
 import com.example.ajay.repo.LoginRepository;
 import com.example.ajay.response.ResponseGlobal;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -24,45 +25,46 @@ public class LoginService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    // Student Login
     public ResponseGlobal<?> login(String email, String password) {
 
-        if (email == null || password == null) {
+        if (email == null || email.isBlank()
+                || password == null || password.isBlank()) {
             return ResponseGlobal.onFailure(
-                    "Email and password must not be null"
+                    "Email and password are required"
             );
         }
 
         // Find user by email
-        Login user = loginRepository.findByEmail(email);
+        Login user = loginRepository.findByEmail(email.trim());
 
         if (user == null) {
             return ResponseGlobal.onFailure(
-                    "User not found with email: " + email
+                    "Invalid email or password"
             );
         }
 
-        // Check encrypted password
-        boolean passwordMatches =
-                passwordEncoder.matches(
-                        password,
-                        user.getPassword()
-                );
+        // Validate encrypted password
+        boolean passwordMatches = passwordEncoder.matches(
+                password,
+                user.getPassword()
+        );
 
         if (!passwordMatches) {
             return ResponseGlobal.onFailure(
-                    "Invalid password for email: " + email
+                    "Invalid email or password"
             );
         }
 
-        // Generate JWT
-        String jwt = jwtService.generateToken(
+        // Generate JWT token
+        String token = jwtService.generateToken(
                 user.getEmail(),
                 user.getName()
         );
 
         return ResponseGlobal.onSuccess(
                 "Login successful",
-                jwt
+                token
         );
     }
 }

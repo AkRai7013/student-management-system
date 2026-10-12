@@ -12,51 +12,59 @@ import java.util.Date;
 @Service
 public class JWTService {
 
-    private final String secretKey =
-            System.getenv("JWT_SECRET");
+    private final SecretKey key;
 
-    private final SecretKey key = Keys.hmacShaKeyFor(
-            secretKey != null
-                    ? secretKey.getBytes(StandardCharsets.UTF_8)
-                    : "replace-this-with-a-long-random-secret-key-123456"
-                    .getBytes(StandardCharsets.UTF_8)
-    );
+    public JWTService() {
+        String secret = System.getenv("JWT_SECRET");
 
-    // Existing method for Student login
-    public String generateToken(String email, String name) {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException(
+                    "JWT_SECRET environment variable is not configured"
+            );
+        }
 
-        return Jwts.builder()
-                .subject(email)
-                .claim("name", name)
-                .claim("email", email)
-                .issuedAt(new Date())
-                .expiration(new Date(
-                        System.currentTimeMillis() + 1000L * 60 * 60 * 10
-                ))
-                .signWith(key)
-                .compact();
+        if (secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException(
+                    "JWT_SECRET must be at least 32 bytes long"
+            );
+        }
+
+        this.key = Keys.hmacShaKeyFor(
+                secret.getBytes(StandardCharsets.UTF_8)
+        );
     }
 
-    // New method for Admin/Staff login
+    public String generateToken(String email, String name) {
+        return generateToken(email, name, null);
+    }
+
     public String generateToken(
             String email,
             String name,
-            String role) {
-
-        return Jwts.builder()
+            String role
+    ) {
+        var builder = Jwts.builder()
                 .subject(email)
-                .claim("name", name)
                 .claim("email", email)
-                .claim("role", role)
+                .claim("name", name)
                 .issuedAt(new Date())
                 .expiration(new Date(
                         System.currentTimeMillis() + 1000L * 60 * 60 * 10
-                ))
+                ));
+
+        if (role != null && !role.isBlank()) {
+            builder.claim("role", role);
+        }
+
+        return builder
                 .signWith(key)
                 .compact();
     }
 
     public Claims getClaims(String token) {
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7).trim();
+        }
 
         return Jwts.parser()
                 .verifyWith(key)
