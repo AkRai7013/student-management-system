@@ -3,6 +3,7 @@ package com.example.ajay.Configuration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -13,6 +14,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JWTService jwtService;
@@ -33,33 +35,39 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS))
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
                 .authorizeHttpRequests(auth -> auth
 
+                        // Public login endpoints
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/login/StudentLogin",
                                 "/admin/login"
                         ).permitAll()
 
-                        // Temporary public account creation for setup.
-                        // Secure this endpoint after initial setup.
+                        // Only ADMIN can create STAFF accounts
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/admin/create"
                         ).hasRole("ADMIN")
 
+                        // All other Admin APIs require ADMIN
                         .requestMatchers("/admin/**")
                         .hasRole("ADMIN")
 
+                        // Student APIs allow ADMIN and STAFF
                         .requestMatchers("/students/**")
                         .hasAnyRole("ADMIN", "STAFF")
 
+                        // Authenticated token helper endpoints
                         .requestMatchers(
                                 "/login/name",
                                 "/login/email"
                         ).authenticated()
 
+                        // All remaining endpoints require authentication
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(

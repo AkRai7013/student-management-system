@@ -32,6 +32,7 @@ public class AdminBootstrap implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+
         if (adminEmail.isBlank()
                 && adminName.isBlank()
                 && adminPassword.isBlank()) {
@@ -73,6 +74,8 @@ public class AdminBootstrap implements CommandLineRunner {
 
         adminRepo.save(admin);
 
-        System.out.println("Initial ADMIN account created successfully.");
+        System.out.println(
+                "Initial ADMIN account created successfully."
+        );
     }
 }

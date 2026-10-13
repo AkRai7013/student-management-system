@@ -27,10 +27,10 @@ public class JWTFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
 
-        return ("POST".equalsIgnoreCase(request.getMethod())
+        // Skip JWT validation only for public login endpoints.
+        return "POST".equalsIgnoreCase(request.getMethod())
                 && ("/admin/login".equals(path)
-                || "/admin/create".equals(path)
-                || "/login/StudentLogin".equals(path)));
+                || "/login/StudentLogin".equals(path));
     }
 
     @Override
@@ -42,13 +42,33 @@ public class JWTFilter extends OncePerRequestFilter {
 
         String header = request.getHeader("Authorization");
 
-        // Continue when no Bearer token is provided.
-        if (header == null || !header.startsWith("Bearer ")) {
+        // Allow requests without a token to continue.
+        // Spring Security will protect the endpoint.
+        if (header == null || header.isBlank()) {
             filterChain.doFilter(request, response);
             return;
         }
 
+        // Validate the Bearer token format.
+        if (!header.startsWith("Bearer ")) {
+            SecurityContextHolder.clearContext();
+            response.sendError(
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "Authorization header must use Bearer token format"
+            );
+            return;
+        }
+
         String token = header.substring(7).trim();
+
+        if (token.isBlank()) {
+            SecurityContextHolder.clearContext();
+            response.sendError(
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "Bearer token is missing"
+            );
+            return;
+        }
 
         try {
             Claims claims = jwtService.getClaims(token);

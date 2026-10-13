@@ -12,8 +12,10 @@ import com.example.ajay.response.ResponseGlobal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -23,71 +25,79 @@ public class StudentService {
     private final LoginRepository loginRepository;
     private final PasswordEncoder passwordEncoder;
 
-
     // CREATE STUDENT
+    @Transactional
     public ResponseGlobal<StudentDTO> createStudent(StudentDTO student) {
 
-        // Validation
-        if (student.getEmail() == null || student.getEmail().isEmpty()) {
-            return ResponseGlobal.onError("Email is required.");
+        if (student == null) {
+            return ResponseGlobal.onError(
+                    "Student details are required."
+            );
         }
 
-        // Check email uniqueness
-        StudentEntity existingStudent =
-                studentRepos.findByEmail(student.getEmail());
+        if (student.getEmail() == null
+                || student.getEmail().isBlank()) {
+            return ResponseGlobal.onError(
+                    "Email is required."
+            );
+        }
 
-        if (existingStudent != null) {
+        if (student.getPassword() == null
+                || student.getPassword().isBlank()) {
+            return ResponseGlobal.onError(
+                    "Password is required."
+            );
+        }
+
+        String email = normalizeEmail(student.getEmail());
+
+        // Check duplicate email in Student table
+        if (studentRepos.findByEmail(email) != null) {
             return ResponseGlobal.onFailure(
                     "This student email is already attached to another student."
             );
         }
 
+        // Check duplicate email in Login table
+        if (loginRepository.existsByEmail(email)) {
+            return ResponseGlobal.onFailure(
+                    "This email is already registered for login."
+            );
+        }
 
-        // Create Student Entity
+        // Create Student
         StudentEntity newStudent = new StudentEntity();
-
         newStudent.setName(student.getName());
         newStudent.setAge(student.getAge());
         newStudent.setPercentage(student.getPercentage());
-        newStudent.setEmail(student.getEmail());
+        newStudent.setEmail(email);
         newStudent.setStatus(true);
 
-
-        // Address
+        // Create Address
         Address address = new Address();
-
         address.setCity(student.getCity());
         address.setState(student.getState());
         address.setPincode(student.getPincode());
 
         newStudent.setAddress(address);
 
-
-        // Save Student
         studentRepos.save(newStudent);
 
-
-        // Create Login
+        // Create Login account
         Login login = new Login();
-
         login.setName(student.getName());
-        login.setEmail(student.getEmail());
-
-        // Encrypt password using BCrypt
-        String encryptedPassword =
-                passwordEncoder.encode(student.getPassword());
-
-        login.setPassword(encryptedPassword);
+        login.setEmail(email);
+        login.setPassword(
+                passwordEncoder.encode(student.getPassword())
+        );
 
         loginRepository.save(login);
-
 
         return ResponseGlobal.onSuccess(
                 "Student and login details have been created successfully.",
                 student
         );
     }
-
 
     // GET STUDENT BY ID
     public StudentEntity getStudentById(Long id) {
@@ -100,19 +110,16 @@ public class StudentService {
                 );
     }
 
-
     // GET ALL STUDENTS
     public List<StudentEntity> getAllStudents() {
-
         return studentRepos.findAll();
     }
 
-
     // UPDATE STUDENT
+    @Transactional
     public ResponseGlobal<StudentEntity> updateStudent(
             Long id,
-            StudentEntity student
-    ) {
+            StudentEntity student) {
 
         if (id == null) {
             return ResponseGlobal.onFailure(
@@ -120,6 +127,11 @@ public class StudentService {
             );
         }
 
+        if (student == null) {
+            return ResponseGlobal.onError(
+                    "Student details are required."
+            );
+        }
 
         StudentEntity existingStudent =
                 studentRepos.findById(id)
@@ -129,29 +141,28 @@ public class StudentService {
                                 )
                         );
 
-
         existingStudent.setName(student.getName());
         existingStudent.setAge(student.getAge());
         existingStudent.setPercentage(student.getPercentage());
 
+        // Validate email if supplied
+        if (student.getEmail() != null
+                && !student.getEmail().isBlank()) {
 
-        // Check email
-        if (student.getEmail() != null) {
+            String email = normalizeEmail(student.getEmail());
 
             StudentEntity existingEmail =
-                    studentRepos.findByEmail(student.getEmail());
+                    studentRepos.findByEmail(email);
 
-            if (existingEmail != null &&
-                    !existingEmail.getId().equals(id)) {
-
+            if (existingEmail != null
+                    && !existingEmail.getId().equals(id)) {
                 return ResponseGlobal.onFailure(
                         "This email is already attached to another student."
                 );
             }
 
-            existingStudent.setEmail(student.getEmail());
+            existingStudent.setEmail(email);
         }
-
 
         return ResponseGlobal.onSuccess(
                 "Student has been updated successfully.",
@@ -159,20 +170,38 @@ public class StudentService {
         );
     }
 
-
-    // DELETE STUDENT
+    // DELETE STUDENT AND RELATED LOGIN
+    @Transactional
     public String deleteStudent(Long id) {
 
-        if (!studentRepos.existsById(id)) {
-
-            return "Student with id " + id +
-                    " does not exist.";
+        if (id == null) {
+            return "Student ID cannot be null.";
         }
 
+        StudentEntity student = studentRepos.findById(id)
+                .orElseThrow(() ->
+                        new StudentNotFoundException(
+                                "Student not found with id: " + id
+                        )
+                );
 
-        studentRepos.deleteById(id);
+        String email = student.getEmail();
 
-        return "Student with id " + id +
-                " has been deleted successfully.";
+        // Delete related Login record first
+        if (email != null && !email.isBlank()) {
+            loginRepository.deleteByEmail(
+                    normalizeEmail(email)
+            );
+        }
+
+        // Delete Student record
+        studentRepos.delete(student);
+
+        return "Student and related login account deleted successfully.";
+    }
+
+    // NORMALIZE EMAIL
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 }

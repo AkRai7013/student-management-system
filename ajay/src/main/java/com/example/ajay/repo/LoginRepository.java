@@ -8,4 +8,8 @@ import org.springframework.stereotype.Repository;
 public interface LoginRepository extends JpaRepository<Login, Long> {
 
     Login findByEmail(String email);
+
+    boolean existsByEmail(String email);
+
+    void deleteByEmail(String email);
 }

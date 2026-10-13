@@ -1,5 +1,6 @@
 package com.example.ajay.DTO;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -12,7 +13,11 @@ import lombok.Data;
 public class StudentDTO {
 
     @NotBlank(message = "Name is required")
-    @Size(min = 2, max = 50, message = "Name must be between 2 and 50 characters")
+    @Size(
+            min = 2,
+            max = 50,
+            message = "Name must be between 2 and 50 characters"
+    )
     private String name;
 
     @Min(value = 18, message = "Age must be at least 18")
@@ -26,12 +31,17 @@ public class StudentDTO {
     @Email(message = "Please enter a valid email")
     private String email;
 
-    @Size(min = 2, max = 10, message = "City must be between 2 and 10 characters")
+    @Size(
+            min = 2,
+            max = 50,
+            message = "City must be between 2 and 50 characters"
+    )
     private String city;
 
     private String state;
 
     private int pincode;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 }
