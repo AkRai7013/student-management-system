@@ -1,3 +1,4 @@
+
 package com.example.ajay.controller;
 
 import com.example.ajay.DTO.StaffDTO;
@@ -8,6 +9,8 @@ import com.example.ajay.service.StaffService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,31 +25,41 @@ public class StaffController {
         this.staffService = staffService;
     }
 
+    private String getAuthenticatedEmail() {
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication.getName() == null
+                || authentication.getName().equals("anonymousUser")) {
+            throw new IllegalArgumentException(
+                    "Authentication required");
+        }
+
+        return authentication.getName();
+    }
+
     // CREATE STAFF PROFILE
     @PostMapping("/create")
     public ResponseEntity<ResponseGlobal<Staff>> createStaff(
             @Valid @RequestBody StaffDTO dto) {
 
-        Staff staff = staffService.createStaff(dto);
+        Staff staff = staffService.createStaff(
+                getAuthenticatedEmail(), dto);
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
+        return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ResponseGlobal.onSuccess(
-                        "Staff profile created successfully",
-                        staff
-                ));
+                        "Staff profile created successfully", staff));
     }
 
-    // GET ALL STAFF
+    // GET ALL STAFF OWNED BY THIS ADMIN
     @GetMapping("/all")
     public ResponseEntity<ResponseGlobal<List<Staff>>> getAllStaff() {
 
-        return ResponseEntity.ok(
-                ResponseGlobal.onSuccess(
-                        "Staff fetched successfully",
-                        staffService.getAllStaff()
-                )
-        );
+        return ResponseEntity.ok(ResponseGlobal.onSuccess(
+                "Staff fetched successfully",
+                staffService.getAllStaff(getAuthenticatedEmail())));
     }
 
     // GET STAFF BY ID
@@ -54,12 +67,9 @@ public class StaffController {
     public ResponseEntity<ResponseGlobal<Staff>> getStaffById(
             @PathVariable Long id) {
 
-        return ResponseEntity.ok(
-                ResponseGlobal.onSuccess(
-                        "Staff fetched successfully",
-                        staffService.getStaffById(id)
-                )
-        );
+        return ResponseEntity.ok(ResponseGlobal.onSuccess(
+                "Staff fetched successfully",
+                staffService.getStaffById(getAuthenticatedEmail(), id)));
     }
 
     // UPDATE STAFF
@@ -68,12 +78,10 @@ public class StaffController {
             @PathVariable Long id,
             @Valid @RequestBody StaffDTO dto) {
 
-        return ResponseEntity.ok(
-                ResponseGlobal.onSuccess(
-                        "Staff updated successfully",
-                        staffService.updateStaff(id, dto)
-                )
-        );
+        return ResponseEntity.ok(ResponseGlobal.onSuccess(
+                "Staff updated successfully",
+                staffService.updateStaff(
+                        getAuthenticatedEmail(), id, dto)));
     }
 
     // DEACTIVATE STAFF
@@ -81,11 +89,9 @@ public class StaffController {
     public ResponseEntity<ResponseGlobal<Staff>> deactivateStaff(
             @PathVariable Long id) {
 
-        return ResponseEntity.ok(
-                ResponseGlobal.onSuccess(
-                        "Staff deactivated successfully",
-                        staffService.deactivateStaff(id)
-                )
-        );
+        return ResponseEntity.ok(ResponseGlobal.onSuccess(
+                "Staff deactivated successfully",
+                staffService.deactivateStaff(
+                        getAuthenticatedEmail(), id)));
     }
 }

@@ -1,3 +1,4 @@
+
 package com.example.ajay.service;
 
 import com.example.ajay.DTO.StaffDTO;
@@ -28,22 +29,21 @@ public class StaffService {
 
     // CREATE STAFF PROFILE
     @Transactional
-    public Staff createStaff(StaffDTO dto) {
+    public Staff createStaff(String adminEmail, StaffDTO dto) {
 
+        Admin owner = getAdminByEmail(adminEmail);
         String email = normalizeEmail(dto.getEmail());
 
         Admin account = adminRepository.findByEmail(email);
 
         if (account == null || account.getRole() != RoleEnum.STAFF) {
             throw new IllegalArgumentException(
-                    "Create the STAFF login account first using /admin/create"
-            );
+                    "Create the STAFF login account first using /admin/create");
         }
 
         if (staffRepository.existsByEmail(email)) {
             throw new IllegalArgumentException(
-                    "Staff profile already exists for this email"
-            );
+                    "Staff profile already exists for this email");
         }
 
         Staff staff = new Staff();
@@ -52,30 +52,34 @@ public class StaffService {
         staff.setDepartment(dto.getDepartment());
         staff.setPhone(dto.getPhone());
         staff.setStatus("ACTIVE");
+        staff.setAdmin(owner);
 
         return staffRepository.save(staff);
     }
 
-    // GET ALL STAFF
-    public List<Staff> getAllStaff() {
-        return staffRepository.findAll();
+    // GET STAFF OWNED BY THIS ADMIN
+    @Transactional(readOnly = true)
+    public List<Staff> getAllStaff(String adminEmail) {
+        Admin owner = getAdminByEmail(adminEmail);
+        return staffRepository.findByAdmin_Id(owner.getId());
     }
 
-    // GET STAFF BY ID
-    public Staff getStaffById(Long id) {
-        return staffRepository.findById(id)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Staff not found with ID: " + id
-                        )
-                );
+    // GET ONE STAFF MEMBER OWNED BY THIS ADMIN
+    @Transactional(readOnly = true)
+    public Staff getStaffById(String adminEmail, Long id) {
+        Admin owner = getAdminByEmail(adminEmail);
+
+        return staffRepository.findByIdAndAdmin_Id(id, owner.getId())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Staff not found for this admin"));
     }
 
     // UPDATE STAFF PROFILE
     @Transactional
-    public Staff updateStaff(Long id, StaffDTO dto) {
+    public Staff updateStaff(
+            String adminEmail, Long id, StaffDTO dto) {
 
-        Staff staff = getStaffById(id);
+        Staff staff = getStaffById(adminEmail, id);
 
         if (dto.getName() != null && !dto.getName().isBlank()) {
             staff.setName(dto.getName().trim());
@@ -84,29 +88,40 @@ public class StaffService {
         staff.setDepartment(dto.getDepartment());
         staff.setPhone(dto.getPhone());
 
-        // Email changes are intentionally not supported here.
-        // The login account and JWT identity use the same email.
-
+        // Email changes are not supported because the login uses this email.
         return staffRepository.save(staff);
     }
 
     // DEACTIVATE STAFF
     @Transactional
-    public Staff deactivateStaff(Long id) {
-
-        Staff staff = getStaffById(id);
+    public Staff deactivateStaff(String adminEmail, Long id) {
+        Staff staff = getStaffById(adminEmail, id);
         staff.setStatus("INACTIVE");
-
         return staffRepository.save(staff);
+    }
+
+    // FIND ADMIN OWNER
+    private Admin getAdminByEmail(String email) {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Authenticated admin email is required");
+        }
+
+        Admin admin = adminRepository.findByEmail(
+                email.trim().toLowerCase(Locale.ROOT));
+
+        if (admin == null || admin.getRole() != RoleEnum.ADMIN) {
+            throw new IllegalArgumentException(
+                    "Admin account not found or access denied");
+        }
+
+        return admin;
     }
 
     // NORMALIZE EMAIL
     private String normalizeEmail(String email) {
-
         if (email == null || email.isBlank()) {
-            throw new IllegalArgumentException(
-                    "Staff email is required"
-            );
+            throw new IllegalArgumentException("Staff email is required");
         }
 
         return email.trim().toLowerCase(Locale.ROOT);

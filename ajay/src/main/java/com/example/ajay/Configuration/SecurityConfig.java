@@ -1,3 +1,4 @@
+
 package com.example.ajay.Configuration;
 
 import org.springframework.context.annotation.Bean;
@@ -35,9 +36,7 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS
-                        )
-                )
+                                SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
 
                         // Public login endpoints
@@ -47,21 +46,76 @@ public class SecurityConfig {
                                 "/admin/login"
                         ).permitAll()
 
-                        // Only ADMIN can create STAFF accounts
+                        // Only ADMIN can create STAFF login accounts
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/admin/create"
                         ).hasRole("ADMIN")
 
-                        // All other Admin APIs require ADMIN
+                        // Admin APIs
                         .requestMatchers("/admin/**")
                         .hasRole("ADMIN")
 
-                        // Student APIs allow ADMIN and STAFF
+                        // Student APIs
                         .requestMatchers("/students/**")
                         .hasAnyRole("ADMIN", "STAFF")
 
-                        // Authenticated token helper endpoints
+                        // Staff profile management: ADMIN only
+                        .requestMatchers("/staff/**")
+                        .hasRole("ADMIN")
+
+                        // Holiday management
+                        .requestMatchers(
+                                HttpMethod.POST, "/holidays/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers(
+                                HttpMethod.PUT, "/holidays/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers(
+                                HttpMethod.PATCH, "/holidays/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers(
+                                HttpMethod.DELETE, "/holidays/**")
+                        .hasRole("ADMIN")
+
+                        // Event management
+                        .requestMatchers(
+                                HttpMethod.POST, "/events/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers(
+                                HttpMethod.PUT, "/events/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers(
+                                HttpMethod.PATCH, "/events/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers(
+                                HttpMethod.DELETE, "/events/**")
+                        .hasRole("ADMIN")
+
+                        // Notice management
+                        .requestMatchers(
+                                HttpMethod.POST, "/notices/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers(
+                                HttpMethod.PUT, "/notices/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers(
+                                HttpMethod.PATCH, "/notices/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers(
+                                HttpMethod.DELETE, "/notices/**")
+                        .hasRole("ADMIN")
+
+                        // Admin and STAFF can read HRMS records.
+                        // Services must enforce ownership.
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/holidays/**",
+                                "/events/**",
+                                "/notices/**"
+                        ).hasAnyRole("ADMIN", "STAFF")
+
+                        // Token helper endpoints
                         .requestMatchers(
                                 "/login/name",
                                 "/login/email"

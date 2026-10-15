@@ -1,4 +1,6 @@
+
 package com.example.ajay.entity;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -19,7 +21,12 @@ public class Staff {
 
     private String phone;
 
+    @Column(nullable = false)
     private String status = "ACTIVE";
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "admin_id", nullable = false)
+    private Admin admin;
 
     public Staff() {
     }
@@ -70,5 +77,13 @@ public class Staff {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public Admin getAdmin() {
+        return admin;
+    }
+
+    public void setAdmin(Admin admin) {
+        this.admin = admin;
     }
 }
