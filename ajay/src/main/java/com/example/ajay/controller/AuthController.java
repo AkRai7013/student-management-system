@@ -1,6 +1,7 @@
 package com.example.ajay.controller;
 
 import com.example.ajay.Configuration.JWTService;
+import com.example.ajay.DTO.LoginRequestDTO;
 import com.example.ajay.response.ResponseGlobal;
 import com.example.ajay.service.LoginService;
 
@@ -15,28 +16,28 @@ public class AuthController {
 
     public AuthController(
             LoginService loginService,
-            JWTService jwtService
-    ) {
+            JWTService jwtService) {
         this.loginService = loginService;
         this.jwtService = jwtService;
     }
 
-    // Student Login
+    // Student Login using JSON
     @PostMapping("/StudentLogin")
     public ResponseGlobal<?> login(
-            @RequestParam String email,
-            @RequestParam String password
-    ) {
-        return loginService.login(email, password);
+            @RequestBody LoginRequestDTO request) {
+
+        return loginService.login(
+                request.getEmail(),
+                request.getPassword()
+        );
     }
 
     // Get name from JWT token
     @GetMapping("/name")
     public ResponseGlobal<String> getNameByToken(
-            @RequestHeader("Authorization") String authorization
-    ) {
-        String token = extractToken(authorization);
+            @RequestHeader("Authorization") String authorization) {
 
+        String token = extractToken(authorization);
         String name = jwtService.getNameByToken(token);
 
         return ResponseGlobal.onSuccess(
@@ -48,10 +49,9 @@ public class AuthController {
     // Get email from JWT token
     @GetMapping("/email")
     public ResponseGlobal<String> getEmailByToken(
-            @RequestHeader("Authorization") String authorization
-    ) {
-        String token = extractToken(authorization);
+            @RequestHeader("Authorization") String authorization) {
 
+        String token = extractToken(authorization);
         String email = jwtService.getEmailByToken(token);
 
         return ResponseGlobal.onSuccess(
@@ -70,6 +70,6 @@ public class AuthController {
             );
         }
 
-        return authorization.substring(7);
+        return authorization.substring(7).trim();
     }
 }

@@ -4,6 +4,10 @@ import com.example.ajay.DTO.StudentDTO;
 import com.example.ajay.entity.StudentEntity;
 import com.example.ajay.response.ResponseGlobal;
 import com.example.ajay.service.StudentService;
+
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,66 +22,91 @@ public class StudentController {
         this.service = service;
     }
 
-
     // CREATE STUDENT
     @PostMapping("/create")
-    public ResponseGlobal<StudentDTO> createStudent(
-            @RequestBody StudentDTO student) {
+    public ResponseEntity<ResponseGlobal<StudentDTO>> createStudent(
+            @Valid @RequestBody StudentDTO student) {
 
-        return service.createStudent(student);
+        ResponseGlobal<StudentDTO> response =
+                service.createStudent(student);
+
+        if (!response.isSuccess()) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(response);
+        }
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
     }
-
 
     // GET ALL STUDENTS
     @GetMapping("/all")
-    public ResponseGlobal<List<StudentEntity>> getAllStudents() {
+    public ResponseEntity<ResponseGlobal<List<StudentEntity>>>
+    getAllStudents() {
 
-        List<StudentEntity> students =
-                service.getAllStudents();
+        List<StudentEntity> students = service.getAllStudents();
 
-        return ResponseGlobal.onSuccess(
-                "Students fetched successfully",
-                students
+        return ResponseEntity.ok(
+                ResponseGlobal.onSuccess(
+                        "Students fetched successfully",
+                        students
+                )
         );
     }
-
 
     // GET STUDENT BY ID
     @GetMapping("/{id}")
-    public ResponseGlobal<StudentEntity> getStudentById(
-            @PathVariable Long id) {
+    public ResponseEntity<ResponseGlobal<StudentEntity>>
+    getStudentById(@PathVariable Long id) {
 
-        StudentEntity student =
-                service.getStudentById(id);
+        StudentEntity student = service.getStudentById(id);
 
-        return ResponseGlobal.onSuccess(
-                "Student fetched successfully",
-                student
+        return ResponseEntity.ok(
+                ResponseGlobal.onSuccess(
+                        "Student fetched successfully",
+                        student
+                )
         );
     }
 
-
     // UPDATE STUDENT
     @PutMapping("/{id}")
-    public ResponseGlobal<StudentEntity> updateStudent(
+    public ResponseEntity<ResponseGlobal<StudentEntity>> updateStudent(
             @PathVariable Long id,
             @RequestBody StudentEntity student) {
 
-        return service.updateStudent(id, student);
-    }
+        ResponseGlobal<StudentEntity> response =
+                service.updateStudent(id, student);
 
+        if (!response.isSuccess()) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(response);
+        }
+
+        return ResponseEntity.ok(response);
+    }
 
     // DELETE STUDENT
     @DeleteMapping("/{id}")
-    public ResponseGlobal<String> deleteStudent(
+    public ResponseEntity<ResponseGlobal<String>> deleteStudent(
             @PathVariable Long id) {
 
-        String message =
-                service.deleteStudent(id);
+        String message = service.deleteStudent(id);
 
-        return ResponseGlobal.onSuccess(
-                message,
-                null
+        if (message == null
+                || message.toLowerCase().contains("does not exist")
+                || message.toLowerCase().contains("not found")) {
+
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(ResponseGlobal.onFailure(message));
+        }
+
+        return ResponseEntity.ok(
+                ResponseGlobal.onSuccess(message, null)
         );
     }
 }
